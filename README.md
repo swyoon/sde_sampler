@@ -1,3 +1,26 @@
+# Forked and modified
+
+* Remove the dependency of pykeops. Its installation is such a pain.
+    * pykeops is used for evaluation of sinkhorn divergence. In this repo, the corresponding codes are disabled.
+
+## Modified installation instruction
+
+* git clone
+* `conda create -n sde_sampler python==3.10 pip --yes`
+* Install a version of pytorch that is compatible with your CUDA
+     * Depending on your system configuration, you may need to downgrad numpy version to less than 2.0. In such case, do `pip uninstall numpy; pip install numpy<2.0` or `conda install numpy<2.0`
+* `pip install -e .`
+* Install dependencies manually:
+    * `pip install hydra-core hydra-joblib-launcher hydra-submitit-launcher torchsde torchquad torch_ema`
+    * `pip install wandb plotly kaleido`
+    * Install other dependencies as you need.
+
+To test the installation, run the following command:
+
+```
+python scripts/main.py solver=basic_pis model@generative_ctrl=clipped generative_ctrl.base_model.channels=32 +lr_scheduler=multi_step wandb.project=test
+```
+--------------
 # Sampling via learned diffusions: `sde_sampler`
 > Accompanying code for the paper ['Improved sampling via learned diffusions'](https://arxiv.org/abs/2307.01198) [[`ICLR'24`](https://openreview.net/forum?id=h4pNROsO06),[`BibTeX`](#references)] and ['An optimal control perspective on diffusion-based generative modeling'](https://arxiv.org/abs/2211.01364) [[`TMLR'24`](https://openreview.net/forum?id=oYIjw37pTP),[`BibTeX`](#references)].
 

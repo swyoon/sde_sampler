@@ -92,13 +92,13 @@ def main(cfg: DictConfig):
     wandb.config.update(wandb_config, allow_val_change=True)
 
     # Setup pkeops to prevent CUDA errors
-    if cfg.get("keops_build_path") is not None:
-        import pykeops
+    # if cfg.get("keops_build_path") is not None:
+    #     import pykeops
 
-        keops_path = Path(cfg.keops_build_path).absolute()
-        keops_path.mkdir(parents=True, exist_ok=True)
-        pykeops.set_build_folder(str(keops_path))
-        logging.info("Pykeops build path: %s", keops_path)
+    #     keops_path = Path(cfg.keops_build_path).absolute()
+    #     keops_path.mkdir(parents=True, exist_ok=True)
+    #     pykeops.set_build_folder(str(keops_path))
+    #     logging.info("Pykeops build path: %s", keops_path)
 
     # run solver
     logging.info("---------------------------------------------------------------")
