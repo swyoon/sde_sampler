@@ -66,6 +66,7 @@ def frac_inside_domain(samples, domain):
     samples_inside = (domain[:, 0] <= samples) & (samples <= domain[:, 1])
     return samples_inside.all(dim=-1).float().mean().item()
 
+from sde_sampler.eval.sinkhorn import Sinkhorn_pytorch
 
 def get_metrics(
     distr: Distribution,
@@ -124,6 +125,13 @@ def get_metrics(
         ess = ess.item()
         metrics["eval/effective_sample_size"] = ess
         metrics["eval/norm_effective_sample_size"] = ess / len(weights)
+
+    #Sinkhorn
+    sk = Sinkhorn_pytorch()
+    dist_sample = distr.sample((samples.shape[0],))
+    sinkhorn = sk.compute(x=samples,y=dist_sample)
+    #print(sinkhorn)
+    metrics[f"eval/sinkhorn"] = sinkhorn[0].item()
 
     # Stddevs
     stddevs = samples.std(dim=0)
