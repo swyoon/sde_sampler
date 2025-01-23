@@ -5,6 +5,7 @@ from numbers import Number
 from typing import Callable
 
 import torch
+import numpy as np
 
 from sde_sampler.distr.base import EXPECTATION_FNS, Distribution
 
@@ -67,7 +68,7 @@ def frac_inside_domain(samples, domain):
     return samples_inside.all(dim=-1).float().mean().item()
 
 from sde_sampler.eval.sinkhorn import Sinkhorn_pytorch
-
+from sde_sampler.eval.tvd import Energy_TVD
 def get_metrics(
     distr: Distribution,
     samples: torch.Tensor,
@@ -128,10 +129,17 @@ def get_metrics(
 
     #Sinkhorn
     sk = Sinkhorn_pytorch()
-    dist_sample = distr.sample((samples.shape[0],))
-    sinkhorn = sk.compute(x=samples,y=dist_sample)
-    #print(sinkhorn)
+    num_data = 1000
+    idx = np.random.permutation(np.arange(0,samples.shape[0]))[:num_data]
+    dist_sample = distr.sample((num_data,))
+    print(dist_sample.shape)
+    sinkhorn = sk.compute(x=samples[idx],y=dist_sample)
     metrics[f"eval/sinkhorn"] = sinkhorn[0].item()
+
+    ##TVD
+    energy = lambda x: -distr.unnorm_log_prob(x).float().to(dist_sample.device)
+    tvd_metric = Energy_TVD(samples[idx],dist_sample,energy)
+    metrics[f"eval/tvd"] = tvd_metric.item()
 
     # Stddevs
     stddevs = samples.std(dim=0)
