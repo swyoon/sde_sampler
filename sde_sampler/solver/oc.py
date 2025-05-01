@@ -118,6 +118,13 @@ class TrainableDiff(Trainable):
             )
             results.plots.update({f"{k}_inference": v for k, v in plots.items()})
 
+        ######Inference trajectory added for logzf computation
+        xs_backward = self.eval_integrator.integrate(
+                sde=self.inference_sde, ts=ts, x_init=results.samples, timesteps=ts
+            )
+        results.log_norm_const_preds["logzf"] = self.eval_logz_from_backward(ts,
+            xs_backward)
+
         return results
 
 
@@ -178,6 +185,16 @@ class Bridge(TrainableDiff):
             return_traj=return_traj,
         )
 
+    def eval_logz_from_backward(
+            self, ts: torch.Tensor, xs_backward: torch.Tensor
+    ) -> float:
+        return self.loss.eval_logz_from_backward(
+            ts,
+            xs_backward,
+            self.clipped_target_unnorm_log_prob,
+            initial_log_prob = self.prior.log_prob,
+        )
+
 
 class PIS(TrainableDiff):
     save_attrs = TrainableDiff.save_attrs + ["loss"]
@@ -229,6 +246,16 @@ class PIS(TrainableDiff):
             compute_weights=compute_weights,
             return_traj=return_traj,
         )
+    
+    def eval_logz_from_backward(
+            self, ts: torch.Tensor, xs_backward: torch.Tensor
+    ) -> float:
+        return self.loss.eval_logz_from_backward(
+            ts,
+            xs_backward,
+            self.clipped_target_unnorm_log_prob,
+            self.reference_distr.log_prob,
+        )
 
 
 class DDS(TrainableDiff):
@@ -272,6 +299,16 @@ class DDS(TrainableDiff):
             self.reference_distr.log_prob,
             compute_weights=compute_weights,
             return_traj=return_traj,
+        )
+    
+    def eval_logz_from_backward(
+            self, ts: torch.Tensor, xs_backward: torch.Tensor
+    ) -> float:
+        return self.loss.eval_logz_from_backward(
+            ts,
+            xs_backward,
+            self.clipped_target_unnorm_log_prob,
+            self.reference_distr.log_prob,
         )
 
 

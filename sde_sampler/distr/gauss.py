@@ -49,6 +49,10 @@ def gmm_params(name: str = "heart", dim: int = 2):
         x_coords = torch.linspace(-5, 5, 3)
         loc = torch.cartesian_prod(x_coords, x_coords)
         factor = math.sqrt(0.3)
+    elif name == '25_gmm':
+        x_coords = torch.linspace(-10, 10, 5)
+        loc = torch.cartesian_prod(x_coords, x_coords)
+        factor = math.sqrt(0.3)
     elif name == "circle":
         freq = 2 * torch.pi * torch.arange(1, 9) / 8
         loc = torch.stack([4.0 * freq.cos(), 4.0 * freq.sin()], dim=1)

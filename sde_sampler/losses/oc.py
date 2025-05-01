@@ -113,6 +113,8 @@ class BaseOCLoss:
         else:
             weights = None
             log_norm_const_preds = {"log_norm_const_lb": neg_rnd.mean().item()}
+
+        log_norm_const_preds["logzr"] = neg_rnd.exp().mean().log()
         return Results(
             samples=samples,
             weights=weights,
@@ -228,6 +230,87 @@ class TimeReversalLoss(BaseOCLoss):
         if return_traj:
             xs = torch.stack(xs)
         return x, rnd, xs
+    
+    def eval_logz_from_backward(
+        self,
+        ts: torch.Tensor,
+        xs_backward: torch.Tensor,
+        terminal_unnorm_log_prob: Callable,
+        initial_log_prob: Callable | None = None,
+        train: bool = True,
+        compute_ito_int: bool = False,
+        change_sde_ctrl: bool = False,
+    ):
+        
+        traj = xs_backward
+        traj_fwd = traj.flip(0)
+        x0 = traj_fwd[0]
+        x = x0
+        
+        compute_ito_int = self.method != "kl"
+        change_sde_ctrl = self.method in ["lv", "lv_traj"]
+        # Initial cost
+        if train and self.method in ["kl", "kl_ito"]:
+            rnd = 0.0
+        else:
+            rnd = initial_log_prob(x)
+            assert rnd.shape == (x.shape[0], 1)
+
+        
+        # Simulate
+        for s, t, x in zip(ts[:-1], ts[1:], traj_fwd[:-1]):
+            # Evaluate
+            if change_sde_ctrl:
+                generative_ctrl, sde_ctrl = self.generative_and_sde_ctrl(s, x)
+            else:
+                sde_ctrl = generative_ctrl = self.generative_ctrl(s, x)
+            sde_diff = self.sde.diff(s, x)
+            dt = t - s
+
+            # Loss increments
+            if self.inference_ctrl is None:
+                gen_plus_inf_ctrl = gen_minus_inf_ctrl = generative_ctrl
+
+            else:
+                div_estimator = self.div_estimator if train else None
+                div_ctrl, inference_ctrl = compute_divx(
+                    self.inference_ctrl,
+                    s,
+                    x,
+                    noise_type=div_estimator,
+                    create_graph=train,
+                )
+
+                # This assumes the diffusion coeff. to be independent of x
+                rnd += sde_diff * div_ctrl * dt
+                gen_plus_inf_ctrl = generative_ctrl + inference_ctrl
+                gen_minus_inf_ctrl = generative_ctrl - inference_ctrl
+
+            if change_sde_ctrl:
+                cost = gen_plus_inf_ctrl * (sde_ctrl - 0.5 * gen_minus_inf_ctrl)
+                rnd += cost.sum(dim=-1, keepdim=True) * dt
+            else:
+                rnd += 0.5 * (gen_plus_inf_ctrl**2).sum(dim=-1, keepdim=True) * dt
+
+            if not train:
+                rnd -= self.sde.drift_div_int(s, t, x)
+
+            # Euler-Maruyama
+            db = torch.randn_like(x) * dt.sqrt()
+
+            # Compute ito integral
+            if compute_ito_int:
+                rnd += (gen_plus_inf_ctrl * db).sum(dim=-1, keepdim=True)
+
+
+        # Terminal cost
+        rnd -= terminal_unnorm_log_prob(x)
+        assert rnd.shape == (x.shape[0], 1)
+
+        neg_rnd = -rnd
+        logzf = neg_rnd.exp().mean().log()
+
+        return logzf
 
     def __call__(
         self,
@@ -342,6 +425,70 @@ class ReferenceSDELoss(BaseOCLoss):
 
         return x, rnd, xs
 
+    def eval_logz_from_backward(
+        self,
+        ts: torch.Tensor,
+        xs_backward: torch.Tensor,       
+        terminal_unnorm_log_prob: Callable,
+        reference_log_prob: Callable,
+        compute_ito_int: bool = False,
+        change_sde_ctrl: bool = False,
+    ):
+        
+        compute_ito_int = self.method != "kl"
+        change_sde_ctrl = self.method in ["lv", "lv_traj"]
+        # Initial cost
+        rnd = 0.0
+
+        traj = xs_backward
+        traj_fwd = traj.flip(0)
+        x0 = traj_fwd[0]
+        x = x0
+        # Simulate
+        for s, t, x in zip(ts[:-1], ts[1:], traj_fwd[:-1]):
+            # Evaluate
+            if change_sde_ctrl:
+                generative_ctrl, sde_ctrl = self.generative_and_sde_ctrl(s, x)
+            else:
+                sde_ctrl = generative_ctrl = self.generative_ctrl(s, x)
+            sde_diff = self.sde.diff(s, x)
+            dt = t - s
+
+            # Loss increments
+            if self.reference_ctrl is None:
+                gen_minus_ref_ctrl = generative_ctrl
+                gen_plus_ref_ctrl = generative_ctrl
+            else:
+                reference_ctrl = self.reference_ctrl(s, x)
+                gen_minus_ref_ctrl = generative_ctrl - reference_ctrl
+                gen_plus_ref_ctrl = reference_ctrl + generative_ctrl
+
+            if change_sde_ctrl:
+                running_cost = gen_minus_ref_ctrl * (sde_ctrl - 0.5 * gen_plus_ref_ctrl)
+                rnd += running_cost.sum(dim=-1, keepdim=True) * dt
+            else:
+                rnd += 0.5 * (gen_minus_ref_ctrl**2).sum(dim=-1, keepdim=True) * dt
+
+            # Euler-Maruyama
+            db = torch.randn_like(x) * dt.sqrt()
+            x = x + (self.sde.drift(s, x) + sde_diff * sde_ctrl) * dt + sde_diff * db
+
+            # Compute ito integral
+            if compute_ito_int:
+                rnd += (gen_minus_ref_ctrl * db).sum(dim=-1, keepdim=True)
+
+
+        # Terminal cost
+        rnd += reference_log_prob(x) - terminal_unnorm_log_prob(x)
+        assert rnd.shape == (x.shape[0], 1)
+
+
+        neg_rnd = -rnd
+        logzf = neg_rnd.exp().mean().log()
+
+        return logzf
+
+
     def __call__(
         self,
         ts: torch.Tensor,
@@ -455,6 +602,68 @@ class ExponentialIntegratorSDELoss(BaseOCLoss):
             xs = torch.stack(xs)
 
         return x, rnd, xs
+    
+    def eval_logz_from_backward(
+        self,
+        ts: torch.Tensor,
+        xs_backward: torch.Tensor,
+        terminal_unnorm_log_prob: Callable,
+        reference_log_prob: Callable,
+        compute_ito_int: bool = False,
+        change_sde_ctrl: bool = False,
+    ):
+        
+        compute_ito_int = self.method != "kl"
+        change_sde_ctrl = self.method in ["lv", "lv_traj"]
+        # Initial cost
+        rnd = 0.0
+
+        traj = xs_backward
+        traj_fwd = traj.flip(0)
+        x0 = traj_fwd[0]
+        x = x0
+        # Simulate
+        for s, t, x in zip(ts[:-1], ts[1:], traj_fwd[:-1]):
+            # Evaluate
+            if change_sde_ctrl:
+                generative_ctrl, sde_ctrl = self.generative_and_sde_ctrl(s, x)
+                running_cost = (
+                    generative_ctrl * (sde_ctrl - 0.5 * generative_ctrl)
+                ).sum(dim=-1, keepdim=True)
+            else:
+                sde_ctrl = generative_ctrl = self.generative_ctrl(s, x)
+                running_cost = 0.5 * (generative_ctrl**2).sum(dim=-1, keepdim=True)
+            dt = t - s
+
+            # Exponential integrator as implemented by Vargas et.al
+            beta_k = torch.clip(self.alpha * dt.sqrt(), 0, 1)
+            alpha_k = torch.sqrt(1.0 - beta_k**2)
+            rnd += beta_k**2 * self.sigma**2 * running_cost
+            noise = torch.randn_like(x)
+            x = (
+                x * alpha_k
+                + (beta_k**2) * (self.sigma**2) * sde_ctrl
+                + self.sigma * beta_k * noise
+            )
+
+            # Compute ito integral
+            if compute_ito_int:
+                rnd += (self.sigma * generative_ctrl * noise * beta_k).sum(
+                    dim=-1, keepdim=True
+                )
+
+
+        # compute reference log prob value based on based in prior
+        reference_log_prob_value = reference_log_prob(x)
+        rnd += reference_log_prob_value - terminal_unnorm_log_prob(x)
+
+        assert rnd.shape == (x.shape[0], 1)  # one loss number for each sample
+
+        neg_rnd = -rnd
+        logzf = neg_rnd.exp().mean().log()
+
+        return logzf
+
 
     def __call__(
         self,
