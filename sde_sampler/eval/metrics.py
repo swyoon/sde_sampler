@@ -8,7 +8,7 @@ import torch
 import numpy as np
 
 from sde_sampler.distr.base import EXPECTATION_FNS, Distribution
-
+from sde_sampler.eval.wasserstein import wasserstein
 
 def abs_and_rel_error(
     prediction: Number, target: Number, suffix: str = "", eps: float = 1e-8
@@ -129,12 +129,16 @@ def get_metrics(
 
     #Sinkhorn
     sk = Sinkhorn_pytorch()
-    num_data = 1000
+    num_data = 2000
     idx = np.random.permutation(np.arange(0,samples.shape[0]))[:num_data]
     dist_sample = distr.sample((num_data,))
     print(dist_sample.shape)
     sinkhorn = sk.compute(x=samples[idx],y=dist_sample)
     metrics[f"eval/sinkhorn"] = sinkhorn[0].item()
+
+    ###Wasserstein
+    w2 = wasserstein(dist_sample, samples[idx])
+    metrics[f"eval/wasserstein"] = w2
 
     ##TVD
     energy = lambda x: -distr.unnorm_log_prob(x).float().to(dist_sample.device)
