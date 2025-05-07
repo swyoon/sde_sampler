@@ -119,11 +119,9 @@ class TrainableDiff(Trainable):
             results.plots.update({f"{k}_inference": v for k, v in plots.items()})
 
         ######Inference trajectory added for logzf computation
-        xs_backward = self.eval_integrator.integrate(
-                sde=self.inference_sde, ts=ts, x_init=results.samples, timesteps=ts
-            )
-        results.log_norm_const_preds["logzf"] = self.eval_logz_from_backward(ts,
-            xs_backward)
+
+            results.log_norm_const_preds["logzf"] = self.eval_logz_from_backward(ts,
+            xs)
 
         return results
 

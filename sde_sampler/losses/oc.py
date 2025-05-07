@@ -307,8 +307,9 @@ class TimeReversalLoss(BaseOCLoss):
         rnd -= terminal_unnorm_log_prob(x)
         assert rnd.shape == (x.shape[0], 1)
 
-        neg_rnd = -rnd
-        logzf = neg_rnd.exp().mean().log()
+        logzf = -torch.log(rnd.exp().mean())
+        
+        
 
         return logzf
 
@@ -471,7 +472,6 @@ class ReferenceSDELoss(BaseOCLoss):
 
             # Euler-Maruyama
             db = torch.randn_like(x) * dt.sqrt()
-            x = x + (self.sde.drift(s, x) + sde_diff * sde_ctrl) * dt + sde_diff * db
 
             # Compute ito integral
             if compute_ito_int:
@@ -483,8 +483,7 @@ class ReferenceSDELoss(BaseOCLoss):
         assert rnd.shape == (x.shape[0], 1)
 
 
-        neg_rnd = -rnd
-        logzf = neg_rnd.exp().mean().log()
+        logzf = -torch.log(rnd.exp().mean())
 
         return logzf
 
@@ -659,8 +658,7 @@ class ExponentialIntegratorSDELoss(BaseOCLoss):
 
         assert rnd.shape == (x.shape[0], 1)  # one loss number for each sample
 
-        neg_rnd = -rnd
-        logzf = neg_rnd.exp().mean().log()
+        logzf = -torch.log(rnd.exp().mean())
 
         return logzf
 
