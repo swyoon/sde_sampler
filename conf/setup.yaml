@@ -17,7 +17,7 @@ restore_ckpt_from_wandb: True
 # Hydra
 hydra:
   run:
-    dir: logs/${now:%Y-%m-%d}/${now:%H-%M-%S}
+    dir: logs/${target._target_}/${solver._target_}/${loss.method}/${now:%Y-%m-%d}/${now:%H-%M-%S} #logs/${now:%Y-%m-%d}/${now:%H-%M-%S}
   sweep:
     dir: ${hydra.run.dir}
     subdir: ${hydra.job.override_dirname}

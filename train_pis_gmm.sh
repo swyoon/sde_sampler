@@ -1,6 +1,6 @@
 #!/bin/bash
 
-export CUDA_VSIBLE_DEVICES=0
+export CUDA_VISIBLE_DEVICES=1
 
 for seed in 1 2 3
 do
