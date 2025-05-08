@@ -13,6 +13,7 @@
 * Install dependencies manually:
     * `pip install hydra-core hydra-joblib-launcher hydra-submitit-launcher torchsde torchquad torch_ema`
     * `pip install wandb plotly kaleido`
+    * `pip install pandas POT`
     * Install other dependencies as you need.
 
 To test the installation, run the following command:
