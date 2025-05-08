@@ -1,2 +1,3 @@
 _target_: sde_sampler.distr.cox.Cox
 dim: 1600
+#n_reference_samples: 2000

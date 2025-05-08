@@ -114,7 +114,9 @@ class BaseOCLoss:
             weights = None
             log_norm_const_preds = {"log_norm_const_lb": neg_rnd.mean().item()}
 
-        log_norm_const_preds["logzr"] = neg_rnd.exp().mean().log()
+        log_weights_max = neg_rnd.max()
+        weights = (neg_rnd - log_weights_max).exp()
+        log_norm_const_preds["logzr"] = (weights.mean().log() + log_weights_max).item()
         return Results(
             samples=samples,
             weights=weights,
@@ -307,7 +309,8 @@ class TimeReversalLoss(BaseOCLoss):
         rnd -= terminal_unnorm_log_prob(x)
         assert rnd.shape == (x.shape[0], 1)
 
-        logzf = -torch.log(rnd.exp().mean())
+        m=rnd.max()
+        logzf = -(torch.log((rnd - m).exp().mean()) + m)
         
         
 
@@ -483,7 +486,8 @@ class ReferenceSDELoss(BaseOCLoss):
         assert rnd.shape == (x.shape[0], 1)
 
 
-        logzf = -torch.log(rnd.exp().mean())
+        m=rnd.max()
+        logzf = -(torch.log((rnd - m).exp().mean()) + m)
 
         return logzf
 
@@ -658,7 +662,8 @@ class ExponentialIntegratorSDELoss(BaseOCLoss):
 
         assert rnd.shape == (x.shape[0], 1)  # one loss number for each sample
 
-        logzf = -torch.log(rnd.exp().mean())
+        m=rnd.max()
+        logzf = -(torch.log((rnd - m).exp().mean()) + m)
 
         return logzf
 

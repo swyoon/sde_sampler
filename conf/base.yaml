@@ -17,5 +17,5 @@ out_dir:
 ckpt_file: null
 store_last_ckpt: True
 upload_ckpt_to_wandb: last # Choose between True / False / "last"
-plot_results: True
+plot_results: False
 num_threads:

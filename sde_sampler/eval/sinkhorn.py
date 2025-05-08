@@ -3,7 +3,7 @@ Adapted from https://github.com/fwilliams/scalable-pytorch-sinkhorn.
 """
 from __future__ import annotations
 
-import pykeops.torch as keops
+#import pykeops.torch as keops
 import torch
 import tqdm
 

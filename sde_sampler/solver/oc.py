@@ -120,9 +120,14 @@ class TrainableDiff(Trainable):
 
         ######Inference trajectory added for logzf computation
 
-            results.log_norm_const_preds["logzf"] = self.eval_logz_from_backward(ts,
-            xs)
-
+        try:
+            x_target = self.target.sample((self.eval_batch_size,))
+            xs = self.eval_integrator.integrate(
+                    sde=self.inference_sde, ts=ts, x_init=x_target, timesteps=ts
+                )
+            results.log_norm_const_preds["logzf"] = self.eval_logz_from_backward(ts, xs)
+        except:
+            pass
         return results
 
 

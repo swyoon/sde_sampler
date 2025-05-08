@@ -33,8 +33,8 @@ ema_device:
 eval_timesteps: ${train_timesteps}
 eval_batch_size: 100000
 eval_stddev_steps:
-eval_interval: 500
+eval_interval: 3000
 eval_device:
 eval_init: True
 ckpt_interval:
-log_interval: 50
+log_interval: 1500
