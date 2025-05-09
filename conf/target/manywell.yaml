@@ -1,0 +1,2 @@
+_target_: sde_sampler.distr.many_well.ManyWell
+dim: 32
