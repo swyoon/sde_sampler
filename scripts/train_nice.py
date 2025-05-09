@@ -3,6 +3,7 @@ Adapted from https://github.com/fmu2/NICE
 """
 import argparse
 from pathlib import Path
+from tqdm import tqdm
 
 import numpy as np
 import torch
@@ -131,6 +132,7 @@ def train_nice(args):
     train = True
     running_loss = 0
 
+    pbar = tqdm(total=max_iter, desc="Training NICE")
     while train:
         for _, data in enumerate(trainloader, 1):
             flow.train()  # set to training mode
@@ -152,6 +154,9 @@ def train_nice(args):
             loss.backward()
             optimizer.step()
             scheduler.step()
+
+            pbar.update(1)
+            pbar.set_postfix({'loss': float(loss), 'lr': optimizer.param_groups[0]["lr"]})
 
             if total_iter % 1000 == 0:
                 mean_loss = running_loss / 1000
@@ -182,6 +187,7 @@ def train_nice(args):
                         log_dir / f"samples_iter{total_iter}.png",
                     )
 
+    pbar.close()
     print("Finished training!")
 
     torch.save(
@@ -212,7 +218,8 @@ if __name__ == "__main__":
         "--latent", help="latent distribution.", type=str, default="logistic"
     )
     parser.add_argument(
-        "--max_iter", help="maximum number of iterations.", type=int, default=10000
+        "--max_iter", help="maximum number of iterations. Changed to 25k following the original NICE paper.", 
+        type=int, default=25000
     )
     parser.add_argument(
         "--sample_size", help="number of images to generate.", type=int, default=64
