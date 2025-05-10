@@ -128,7 +128,8 @@ def get_metrics(
         metrics["eval/norm_effective_sample_size"] = ess / len(weights)
 
     #Sinkhorn
-    try:
+    #try:
+        """
         sk = Sinkhorn_pytorch()
         num_data = 2000
         idx = np.random.permutation(np.arange(0,samples.shape[0]))[:num_data]
@@ -136,8 +137,12 @@ def get_metrics(
         print(dist_sample.shape)
         sinkhorn = sk.compute(x=samples[idx],y=dist_sample)
         metrics[f"eval/sinkhorn"] = sinkhorn[0].item()
+        """
 
         ###Wasserstein
+        num_data = 2000
+        idx = np.random.permutation(np.arange(0,samples.shape[0]))[:num_data]
+        dist_sample = distr.sample((num_data,))
         w2 = wasserstein(dist_sample, samples[idx])
         metrics[f"eval/wasserstein"] = w2
 
@@ -145,8 +150,8 @@ def get_metrics(
         energy = lambda x: -distr.unnorm_log_prob(x).float().to(dist_sample.device)
         tvd_metric = Energy_TVD(samples[idx],dist_sample,energy)
         metrics[f"eval/tvd"] = tvd_metric.item()
-    except:
-        pass
+    #except:
+    #    pass
 
     # Stddevs
     stddevs = samples.std(dim=0)

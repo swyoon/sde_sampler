@@ -239,7 +239,7 @@ class TimeReversalLoss(BaseOCLoss):
         xs_backward: torch.Tensor,
         terminal_unnorm_log_prob: Callable,
         initial_log_prob: Callable | None = None,
-        train: bool = True,
+        train: bool = False,
         compute_ito_int: bool = False,
         change_sde_ctrl: bool = False,
     ):
@@ -260,7 +260,7 @@ class TimeReversalLoss(BaseOCLoss):
 
         
         # Simulate
-        for s, t, x in zip(ts[:-1], ts[1:], traj_fwd[:-1]):
+        for s, t, x, x_next in zip(ts[:-1], ts[1:], traj_fwd[:-1], traj_fwd[1:]):
             # Evaluate
             if change_sde_ctrl:
                 generative_ctrl, sde_ctrl = self.generative_and_sde_ctrl(s, x)
@@ -298,7 +298,7 @@ class TimeReversalLoss(BaseOCLoss):
                 rnd -= self.sde.drift_div_int(s, t, x)
 
             # Euler-Maruyama
-            db = torch.randn_like(x) * dt.sqrt()
+            db = (x_next - x - (self.sde.drift(s, x) + sde_diff * sde_ctrl) * dt) / sde_diff
 
             # Compute ito integral
             if compute_ito_int:
@@ -306,7 +306,8 @@ class TimeReversalLoss(BaseOCLoss):
 
 
         # Terminal cost
-        rnd -= terminal_unnorm_log_prob(x)
+        x_T = traj_fwd[-1]
+        rnd -= terminal_unnorm_log_prob(x_T)
         assert rnd.shape == (x.shape[0], 1)
 
         m=rnd.max()
@@ -440,7 +441,7 @@ class ReferenceSDELoss(BaseOCLoss):
     ):
         
         compute_ito_int = self.method != "kl"
-        change_sde_ctrl = self.method in ["lv", "lv_traj"]
+        #change_sde_ctrl = self.method in ["lv", "lv_traj"]
         # Initial cost
         rnd = 0.0
 
@@ -449,7 +450,7 @@ class ReferenceSDELoss(BaseOCLoss):
         x0 = traj_fwd[0]
         x = x0
         # Simulate
-        for s, t, x in zip(ts[:-1], ts[1:], traj_fwd[:-1]):
+        for s, t, x, x_next in zip(ts[:-1], ts[1:], traj_fwd[:-1], traj_fwd[1:]):
             # Evaluate
             if change_sde_ctrl:
                 generative_ctrl, sde_ctrl = self.generative_and_sde_ctrl(s, x)
@@ -474,7 +475,7 @@ class ReferenceSDELoss(BaseOCLoss):
                 rnd += 0.5 * (gen_minus_ref_ctrl**2).sum(dim=-1, keepdim=True) * dt
 
             # Euler-Maruyama
-            db = torch.randn_like(x) * dt.sqrt()
+            db = (x_next - x - (self.sde.drift(s, x) + sde_diff * sde_ctrl) * dt) / sde_diff
 
             # Compute ito integral
             if compute_ito_int:
@@ -482,7 +483,8 @@ class ReferenceSDELoss(BaseOCLoss):
 
 
         # Terminal cost
-        rnd += reference_log_prob(x) - terminal_unnorm_log_prob(x)
+        x_T = traj_fwd[-1]
+        rnd += reference_log_prob(x_T) - terminal_unnorm_log_prob(x_T)
         assert rnd.shape == (x.shape[0], 1)
 
 
