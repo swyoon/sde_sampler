@@ -19,6 +19,7 @@ import yaml
 from hydra.utils import call, instantiate
 from omegaconf import DictConfig, OmegaConf
 from torch_ema import ExponentialMovingAverage
+from tqdm import tqdm
 
 from sde_sampler.distr.base import Distribution
 from sde_sampler.eval.metrics import get_metrics
@@ -459,6 +460,14 @@ class Trainable(Solver):
 
         logging.info("Start training at step %d.", self.n_steps)
         self.train()
+        
+        # Create progress bar but keep the original loop structure
+        pbar = tqdm(
+            total=self.train_steps,
+            initial=self.n_steps,
+            desc="Training"
+        )
+        
         for _ in range(self.n_steps, self.train_steps):
             # Train
             t_start = time.time()
@@ -471,6 +480,11 @@ class Trainable(Solver):
                 }
             )
             metrics.update({f"params/{k}": v for k, v in self.scheduler.get().items()})
+
+            # Update progress bar separately
+            if "train/loss" in metrics:
+                pbar.set_postfix(loss=f"{metrics['train/loss']:.4f}")
+            pbar.update(1)
 
             # Last step is treated differently
             last_step = self.n_steps == self.train_steps
@@ -493,6 +507,7 @@ class Trainable(Solver):
                 if self.n_steps % self.ckpt_interval == 0:
                     self.store_checkpoint(suffix=f"{self.n_steps:06}")
 
+        pbar.close()
         logging.info("Finished training at step %d.", self.n_steps)
         results = self.evaluate()
         return results
