@@ -114,3 +114,8 @@ class DW4(Distribution):
     def marginal(self, x: torch.Tensor, *args, **kwargs) -> torch.Tensor:
         return self.pdf(x)
     
+    def to(self, device):
+        super().to(device)
+        if self.data is not None:
+            self.data = self.data.to(device)
+        return self

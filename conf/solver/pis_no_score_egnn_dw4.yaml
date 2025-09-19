@@ -13,4 +13,4 @@ solver:
 
 # Model
 generative_ctrl:
-  clip_model: 10.
+  clip_model: 20.
