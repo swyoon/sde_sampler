@@ -1,5 +1,6 @@
 _target_: sde_sampler.distr.lj_particles.LennardJonesPotential
 dim: 165
+n_dims : 3
 n_particles: 55
 data_path: "data/train_split_LJ55-1000-part1.npy"
 # data_path_train: "data/train_split_LJ55-1000-part1.npy"

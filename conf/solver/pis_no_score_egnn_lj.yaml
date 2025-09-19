@@ -3,7 +3,7 @@ defaults:
   - oc_base
   - /prior: delta
   - /sde: bm_pis
-  - /model@generative_ctrl: clipped_egnn
+  - /model@generative_ctrl: clipped_egnn_lj
   - /loss: reference_sde_lv
   - _self_
 

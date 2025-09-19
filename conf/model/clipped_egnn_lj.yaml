@@ -1,5 +1,5 @@
 defaults:
-  - base@base_model: egnn_LJ13
+  - base@base_model: egnn_lj
   - _self_
 
 _target_: sde_sampler.models.reparam.ClippedCtrl

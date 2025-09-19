@@ -121,13 +121,13 @@ class LennardJonesPotential(Distribution):
 
     This inherits your project's `Distribution` base and implements `unnorm_log_prob`.
     """
-    def __init__(self, dim, n_particles, eps=1.0, rm=1.0,
+    def __init__(self, dim, n_particles,n_dims, eps=1.0, rm=1.0,
                  oscillator=True,
                  oscillator_scale=1.0, energy_factor=1.0,
                  data_path=None):
         super().__init__(dim=dim)
-        self._n_particles = n_particles
-        self._n_dims = dim // n_particles
+        self.n_particles = n_particles
+        self.n_dims = n_dims
         self._eps = eps
         self._rm = rm
         self.oscillator = oscillator
@@ -138,8 +138,8 @@ class LennardJonesPotential(Distribution):
         if data_path is not None:
             data = np.load(data_path, allow_pickle=True)
             self.data = remove_mean(torch.tensor(data),
-                                    self._n_particles,
-                                    self._n_dims)
+                                    self.n_particles,
+                                    self.n_dims)
             self.n_data = data.shape[0]
             print(f"Ground truth sample shape: {data.shape}")
         else:
@@ -149,7 +149,7 @@ class LennardJonesPotential(Distribution):
 
     def _energy(self, x):
         batch_shape = x.shape[0]
-        x = x.view(batch_shape, self._n_particles, self._n_dims)
+        x = x.view(batch_shape, self.n_particles, self.n_dims)
 
         dists = distances_from_vectors(x)
         lj_energies = lennard_jones_energy_torch(dists, self._eps, self._rm)

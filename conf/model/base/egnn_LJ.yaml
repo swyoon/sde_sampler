@@ -1,7 +1,6 @@
 _target_: sde_sampler.models.egnn.EGNN_dynamics
-#_partial_: true
-n_particles: 13
-n_dimension: 3
+n_particles: ${target.n_particles}
+n_dimension: ${target.n_dims}
 hidden_nf: 128
 n_layers: 5
 act_fn:
