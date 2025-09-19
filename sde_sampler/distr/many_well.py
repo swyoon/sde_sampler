@@ -128,9 +128,6 @@ class ManyWell(Distribution):
         self.double_well_log_norm_const = np.log(self.Z_x1) + self.logZ_x2
         self.log_norm_const = float(self.double_well_log_norm_const * self.n_double_wells)
         # Set domain
-        
-
-    
 
     def unnorm_log_prob(self, x: torch.Tensor) -> torch.Tensor:
         log_prob = torch.zeros((x.shape[0],), device=x.device)

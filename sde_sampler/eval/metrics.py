@@ -68,7 +68,7 @@ def frac_inside_domain(samples, domain):
     return samples_inside.all(dim=-1).float().mean().item()
 
 from sde_sampler.eval.sinkhorn import Sinkhorn_pytorch
-from sde_sampler.eval.tvd import Energy_TVD
+from sde_sampler.eval.tvd import Energy_TVD,Atomic_TVD
 def get_metrics(
     distr: Distribution,
     samples: torch.Tensor,
@@ -140,7 +140,7 @@ def get_metrics(
         """
 
         ###Wasserstein
-        num_data = 2000
+        num_data = 1000
         idx = np.random.permutation(np.arange(0,samples.shape[0]))[:num_data]
         dist_sample = distr.sample((num_data,))
         w2 = wasserstein(dist_sample, samples[idx])
@@ -148,8 +148,14 @@ def get_metrics(
 
         ##TVD
         energy = lambda x: -distr.unnorm_log_prob(x).float().to(dist_sample.device)
-        tvd_metric = Energy_TVD(samples[idx],dist_sample,energy)
-        metrics[f"eval/tvd"] = tvd_metric.item()
+        tvd_e_metric = Energy_TVD(samples[idx],dist_sample,energy)
+        metrics[f"eval/tvd_e"] = tvd_e_metric.item()
+
+        print(dist_sample.data.shape)
+        print(samples[idx].shape)
+
+        tvd_a_metric = Atomic_TVD(samples[idx],dist_sample,distr)
+        metrics[f"eval/tvd_a"] = tvd_a_metric.item()
     #except:
     #    pass
 
