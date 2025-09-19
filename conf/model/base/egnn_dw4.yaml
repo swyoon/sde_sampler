@@ -1,0 +1,14 @@
+_target_: sde_sampler.models.egnn.EGNN_dynamics
+n_particles: ${target.n_particles}
+n_dimension: ${target.n_dims}
+hidden_nf: 128
+n_layers: 2
+act_fn:
+  _target_: torch.nn.SiLU
+recurrent: True
+tanh: True
+attention: True
+condition_time: True
+agg: "sum"
+
+
