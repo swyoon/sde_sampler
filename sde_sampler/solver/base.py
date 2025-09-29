@@ -309,9 +309,9 @@ class Trainable(Solver):
         self.time = 0.0
         self.eval_stddev_steps: int | None = self.cfg.get("eval_stddev_steps")
         self.eval_init = self.cfg.eval_init
-        self.eval_interval: int = 600#self.cfg.get("eval_interval") or self.train_steps
-        self.log_interval: int = 600#self.cfg.get("log_interval") or self.train_steps
-        self.ckpt_interval: int = 600#self.cfg.get("ckpt_interval") or self.train_steps
+        self.eval_interval: int = 2500#self.cfg.get("eval_interval") or self.train_steps
+        self.log_interval: int = 2500#self.cfg.get("log_interval") or self.train_steps
+        self.ckpt_interval: int = 2500#self.cfg.get("ckpt_interval") or self.train_steps
         self.n_steps: int = 0
         self.n_steps_skip: int = 0
 

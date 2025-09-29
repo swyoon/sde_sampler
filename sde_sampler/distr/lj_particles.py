@@ -185,7 +185,7 @@ class LennardJonesPotential(Distribution):
             osc_energies = 0.5 * self._remove_mean(x).pow(2).sum(dim=(-2, -1))
             lj_energies = lj_energies + osc_energies * self._oscillator_scale
 
-        lj_energies = torch.clamp(lj_energies,min=-1e6,max=1e6)
+        lj_energies = torch.clamp(lj_energies,min=-1e8,max=1e8)
 
         return lj_energies[:, None]
 
