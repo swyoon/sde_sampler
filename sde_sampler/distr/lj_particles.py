@@ -124,7 +124,9 @@ class LennardJonesPotential(Distribution):
     def __init__(self, dim, n_particles,n_dims, eps=1.0, rm=1.0,
                  oscillator=True,
                  oscillator_scale=1.0, energy_factor=1.0,
-                 data_path=None):
+                 data_path=None,
+                 val_data_path: Optional[str] = None,
+                 test_data_path: Optional[str] = None):
         super().__init__(dim=dim)
         self.n_particles = n_particles
         self.n_dims = n_dims
@@ -147,7 +149,31 @@ class LennardJonesPotential(Distribution):
             self.n_data = 0
             print("No Ground truth sample provided")
 
-    def _energy(self, x):
+        if val_data_path is not None:
+            val_data = np.load(val_data_path, allow_pickle=True)
+            self.val_data = remove_mean(torch.tensor(val_data, dtype=torch.float32),
+                                    self.n_particles,
+                                    self.n_dims)
+            self.n_val_data = val_data.shape[0]
+            print(f"Val Ground truth sample shape: {val_data.shape}")
+        else:
+            self.val_data = None
+            self.n_val_data = 0
+            print("No Val ground truth sample provided")
+
+        if test_data_path is not None:
+            test_data = np.load(test_data_path, allow_pickle=True)
+            self.test_data = remove_mean(torch.tensor(test_data, dtype=torch.float32),
+                                    self.n_particles,
+                                    self.n_dims)
+            self.n_test_data = test_data.shape[0]
+            print(f"Test Ground truth sample shape: {test_data.shape}")
+        else:
+            self.test_data = None
+            self.n_test_data = 0
+            print("No Test ground truth sample provided")
+
+    def energy(self, x):
         batch_shape = x.shape[0]
         x = x.view(batch_shape, self.n_particles, self.n_dims)
 
@@ -159,207 +185,49 @@ class LennardJonesPotential(Distribution):
             osc_energies = 0.5 * self._remove_mean(x).pow(2).sum(dim=(-2, -1))
             lj_energies = lj_energies + osc_energies * self._oscillator_scale
 
+        lj_energies = torch.clamp(lj_energies,min=-1e6,max=1e6)
+
         return lj_energies[:, None]
 
     def _remove_mean(self, x):
         return x - torch.mean(x, dim=1, keepdim=True)
 
     def unnorm_log_prob(self, x):
-        return -self._energy(x)
+        return -self.energy(x)
 
-    # def score(self, x: torch.Tensor,eps=1.0, sigma=1.0, *args, **kwargs) -> torch.Tensor:
-    #     """
-    #     Compute score function (∇ log p(x)) for Lennard-Jones N-particle system.
+    def score(self, x: torch.Tensor, *args, **kwargs) -> torch.Tensor:
+        with torch.no_grad():
+            copy_x = x.detach().clone()
+            copy_x.requires_grad = True
+            with torch.enable_grad():
+                # TODO: should it be _gt_disc or _disc
+                #energy_output = self.energy_function(copy_x).sum()
+                self.energy(copy_x).sum().backward()
+                lgv_data = -copy_x.grad.data
+            return lgv_data
 
-    #     Parameters
-    #     ----------
-    #     x : torch.Tensor
-    #         Shape [batch, N*d] or [batch, N, d].
-    #     eps : float
-    #         Depth of potential well (ε).
-    #     sigma : float
-    #         Characteristic length scale (σ).
-
-    #     Returns
-    #     -------
-    #     score : torch.Tensor
-    #         Same shape as x, detached (no gradient history).
-    #     """
-    #     if x.dim() == 2:  # [batch, N*d] → reshape
-    #         batch, nd = x.shape
-    #         N = nd // 3
-    #         x = x.view(batch, N, 3)
-
-    #     # pairwise differences
-    #     rij = x[:, :, None, :] - x[:, None, :, :]   # [batch, N, N, 3]
-    #     dist = torch.norm(rij, dim=-1)   
-        
-    #     print(dist)           # [batch, N, N]
-
-    #     mask = ~torch.eye(x.shape[1], dtype=torch.bool, device=x.device)
-
-    #     # avoid /0
-    #     dist = torch.where(mask, dist, torch.ones_like(dist))
-        
-
-    #     inv_r2 = (sigma / dist) ** 2
-    #     inv_r6 = inv_r2 ** 3
-    #     inv_r12 = inv_r6 ** 2
-
-    #     # scalar prefactor for force magnitude
-    #     coef = 24 * eps * (2 * inv_r12 - inv_r6) / dist**2   # [batch, N, N]
-
-    #     # force on i due to j
-    #     fij = coef[:, :, :, None] * rij   # [batch, N, N, 3]
-
-    #     # sum over j≠i
-    #     grad_E = fij.sum(dim=2)           # [batch, N, 3]
-
-    #     # score = -∇E
-    #     score = -grad_E
-
-    #     return score.view(x.shape[0], -1).detach()
-
-    def sample(self, shape: tuple):
+    def sample(self, shape: tuple, mode='train'):
         assert len(shape) == 1
-        assert self.data is not None
-        n_samples = shape[0]
-        index = np.random.choice(self.n_data, n_samples, replace=False)
-        return self.data[index]
-
+        if(mode == 'train'):
+            assert self.data is not None, "No ground truth data available"
+            n_samples = shape[0]
+            index = np.random.choice(self.n_data, n_samples, replace=False)
+            return self.data[index]
+        if(mode == 'val'):
+            assert self.val_data is not None, "No ground truth data available"
+            n_samples = shape[0]
+            index = np.random.choice(self.n_val_data, n_samples, replace=False)
+            return self.val_data[index]
+        if(mode == 'test'):
+            assert self.test_data is not None, "No ground truth data available"
+            n_samples = shape[0]
+            index = np.random.choice(self.n_test_data, n_samples, replace=False)
+            return self.test_data[index]
+        
     def to(self, device):
         super().to(device)
         if self.data is not None:
             self.data = self.data.to(device)
+            self.val_data = self.val_data.to(device)
+            self.test_data = self.test_data.to(device)
         return self
-    
-
-
-# ####
-# """IDEM Score Estimator"""
-
-# import numpy as np
-# import torch
-
-
-# ## Change this to our energy function
-# from dem.energies.base_energy_function import BaseEnergyFunction
-
-# ###Import from dem
-# from dem.models.components.clipper import Clipper
-# from dem.models.components.noise_schedules import BaseNoiseSchedule
-
-
-# def wrap_for_richardsons(score_estimator):
-#     def _fxn(t, x, energy_function, noise_schedule, num_mc_samples):
-#         bigger_samples = score_estimator(t, x, energy_function, noise_schedule, num_mc_samples)
-
-#         smaller_samples = score_estimator(
-#             t, x, energy_function, noise_schedule, int(num_mc_samples / 2)
-#         )
-
-#         return (2 * bigger_samples) - smaller_samples
-
-#     return _fxn
-
-
-# def log_expectation_reward(
-#     t: torch.Tensor,
-#     x: torch.Tensor,
-#     energy_function: BaseEnergyFunction,
-#     noise_schedule: BaseNoiseSchedule,
-#     num_mc_samples: int,
-#     clipper: Clipper = None,
-# ):
-#     repeated_t = t.unsqueeze(0).repeat_interleave(num_mc_samples, dim=0)
-#     repeated_x = x.unsqueeze(0).repeat_interleave(num_mc_samples, dim=0)
-
-#     h_t = noise_schedule.h(repeated_t).unsqueeze(1)
-
-#     samples = repeated_x + (torch.randn_like(repeated_x) * h_t.sqrt())
-
-#     log_rewards = energy_function(samples)
-
-#     if clipper is not None and clipper.should_clip_log_rewards:
-#         log_rewards = clipper.clip_log_rewards(log_rewards)
-
-#     return torch.logsumexp(log_rewards, dim=-1) - np.log(num_mc_samples)
-
-
-# def estimate_grad_Rt(
-#     t: torch.Tensor,
-#     x: torch.Tensor,
-#     energy_function: BaseEnergyFunction,
-#     noise_schedule: BaseNoiseSchedule,
-#     num_mc_samples: int,
-# ):
-#     if t.ndim == 0:
-#         t = t.unsqueeze(0).repeat(len(x))
-
-#     grad_fxn = torch.func.grad(log_expectation_reward, argnums=1)
-#     vmapped_fxn = torch.vmap(grad_fxn, in_dims=(0, 0, None, None, None), randomness="different")
-
-#     return vmapped_fxn(t, x, energy_function, noise_schedule, num_mc_samples)
-
-
-
-# ##DEM Clipper
-# from typing import Optional
-
-# import torch
-
-# _EPSILON = 1e-6
-
-# class Clipper:
-#     def __init__(
-#         self,
-#         should_clip_scores: bool,
-#         should_clip_log_rewards: bool,
-#         max_score_norm: Optional[float] = None,
-#         min_log_reward: Optional[float] = None,
-#     ):
-#         self._should_clip_scores = should_clip_scores
-#         self._should_clip_log_rewards = should_clip_log_rewards
-#         self.max_score_norm = max_score_norm
-#         self.min_log_reward = min_log_reward
-
-#     @property
-#     def should_clip_scores(self) -> bool:
-#         return self._should_clip_scores
-
-#     @property
-#     def should_clip_log_rewards(self) -> bool:
-#         return self._should_clip_log_rewards
-
-#     def clip_scores(self, scores: torch.Tensor) -> torch.Tensor:
-#         score_norms = torch.linalg.vector_norm(scores, dim=-1).detach()
-
-#         clip_coefficient = torch.clamp(self.max_score_norm / (score_norms + _EPSILON), max=1)
-
-#         return scores * clip_coefficient.unsqueeze(-1)
-
-#     def clip_log_rewards(self, log_rewards: torch.Tensor) -> torch.Tensor:
-#         return log_rewards.clamp(min=self.min_log_reward)
-
-#     def wrap_grad_fxn(self, grad_fxn):
-#         def _run(*args, **kwargs):
-#             scores = grad_fxn(*args, **kwargs)
-#             if self.should_clip_scores:
-#                 scores = self.clip_scores(scores)
-
-#             return scores
-
-#         return _run
-
-
-# ##DEM Noise Scheduler
-# class BaseNoiseSchedule(ABC):
-#     @abstractmethod
-#     def g(t):
-#         # Returns g(t)
-#         pass
-
-#     @abstractmethod
-#     def h(t):
-#         # Returns \int_0^t g(t)^2 dt
-#         pass

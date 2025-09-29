@@ -3,6 +3,8 @@ dim: 39
 n_dims: 3
 n_particles: 13
 data_path: "data/particle_exp/train_split_LJ13-1000.npy"
+val_data_path: "data/particle_exp/val_split_LJ13-1000.npy"
+test_data_path: "data/particle_exp/test_split_LJ13-1000.npy"
 #data_path_train: "data/train_split_LJ13-1000.npy"
 #data_path_val: "data/val_split_LJ13-1000.npy"
 #data_path_test: "data/test_split_LJ13-1000.npy"

@@ -142,7 +142,7 @@ def get_metrics(
         ###Wasserstein
         num_data = 1000
         idx = np.random.permutation(np.arange(0,samples.shape[0]))[:num_data]
-        dist_sample = distr.sample((num_data,))
+        dist_sample = distr.sample((num_data,),mode='val')
         w2 = wasserstein(dist_sample, samples[idx])
         metrics[f"eval/wasserstein"] = w2
 

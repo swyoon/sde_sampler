@@ -5,9 +5,11 @@ n_dims: 2
 dim: 8
 domain_delta: 3.0
 data_path: "data/particle_exp/train_split_DW4.npy"
+val_data_path: "data/particle_exp/val_split_DW4.npy"
+test_data_path: "data/particle_exp/test_split_DW4.npy"
 # Energy params : Adapted from iDEM
 a: 0.0
 b: -4.0
 c: 0.9
 tau: 1.0
-d0: 1.0
+d0: 4.0

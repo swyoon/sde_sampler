@@ -279,7 +279,7 @@ class Trainable(Solver):
         self.ema: EMA | None
 
         # Optimization
-        self.train_steps = self.cfg.train_steps
+        self.train_steps = 25000#self.cfg.train_steps
         self.grad_clip: tp.Callable | None = instantiate(self.cfg.get("grad_clip"))
         self.max_grad: float | None = self.cfg.get("max_grad")
         self.max_loss: float | None = self.cfg.get("max_loss")
@@ -309,9 +309,9 @@ class Trainable(Solver):
         self.time = 0.0
         self.eval_stddev_steps: int | None = self.cfg.get("eval_stddev_steps")
         self.eval_init = self.cfg.eval_init
-        self.eval_interval: int = self.cfg.get("eval_interval") or self.train_steps
-        self.log_interval: int = self.cfg.get("log_interval") or self.train_steps
-        self.ckpt_interval: int = self.cfg.get("ckpt_interval") or self.train_steps
+        self.eval_interval: int = 600#self.cfg.get("eval_interval") or self.train_steps
+        self.log_interval: int = 600#self.cfg.get("log_interval") or self.train_steps
+        self.ckpt_interval: int = 600#self.cfg.get("ckpt_interval") or self.train_steps
         self.n_steps: int = 0
         self.n_steps_skip: int = 0
 
