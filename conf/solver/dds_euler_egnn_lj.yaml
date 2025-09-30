@@ -3,7 +3,7 @@ defaults:
   - oc_base
   - /prior: gauss_truncate
   - /sde: vp_10
-  - /model@generative_ctrl: score
+  - /model@generative_ctrl: score_egnn_lj
   - /loss: reference_sde
   - _self_
 
