@@ -2,9 +2,9 @@
 defaults:
   - oc_base
   - /prior: gauss_truncate
-  - /sde: vp_10
+  - /sde: vp_dw4
   - /model@generative_ctrl: score_egnn_dw4
-  - /loss: reference_sde_lv
+  - /loss: reference_sde
   - _self_
 
 # Solver
@@ -14,4 +14,4 @@ solver:
 # Model
 generative_ctrl:
   clip_score: 10.
-  cl[ip_model: 1000.
+  clip_model: 10.

@@ -31,7 +31,6 @@ class DW4(Distribution):
         n_particles: int = 4,
         n_dims: int = 2,
         dim: int = 8,
-        domain_delta: float = 3.0,
         a: float = 0.0,
         b: float = -4.0,
         c: float = 0.9,

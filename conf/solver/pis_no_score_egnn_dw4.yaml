@@ -4,7 +4,7 @@ defaults:
   - /prior: delta
   - /sde: bm_pis
   - /model@generative_ctrl: clipped_egnn_dw4
-  - /loss: reference_sde_lv
+  - /loss: reference_sde
   - _self_
 
 # Solver
@@ -13,4 +13,4 @@ solver:
 
 # Model
 generative_ctrl:
-  clip_model: 1000.
+  clip_model: 10.

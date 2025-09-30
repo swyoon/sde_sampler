@@ -2,9 +2,9 @@
 defaults:
   - oc_base
   - /prior: gauss_truncate
-  - /sde: vp_10
+  - /sde: vp_dw4
   - /model@generative_ctrl: lerp_dw4
-  - /loss: time_reversal_lv
+  - /loss: time_reversal
   - _self_
 
 # Solver
@@ -13,4 +13,4 @@ solver:
 
 # Model
 generative_ctrl:
-  clip_model: 1000.
+  clip_model: 10.

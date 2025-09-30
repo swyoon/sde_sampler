@@ -4,7 +4,7 @@ defaults:
   - /prior: delta
   - /sde: bm_pis
   - /model@generative_ctrl: score_egnn_dw4
-  - /loss: reference_sde_lv
+  - /loss: reference_sde
   - _self_
 
 # Solver
@@ -12,4 +12,4 @@ solver:
   _target_: sde_sampler.solver.oc.PIS
 # Model
 generative_ctrl:
-  clip_model: 1000.
+  clip_model: 10.
