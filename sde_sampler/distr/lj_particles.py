@@ -135,6 +135,7 @@ class LennardJonesPotential(Distribution):
         self.oscillator = oscillator
         self._oscillator_scale = oscillator_scale
         self._energy_factor = energy_factor
+        self.device = None
         #self.stddevs = torch.tensor([0.6807141304016113])
 
         if data_path is not None:
@@ -212,22 +213,19 @@ class LennardJonesPotential(Distribution):
             assert self.data is not None, "No ground truth data available"
             n_samples = shape[0]
             index = np.random.choice(self.n_data, n_samples, replace=False)
-            return self.data[index]
+            return self.data[index].to(self.device)
         if(mode == 'val'):
             assert self.val_data is not None, "No ground truth data available"
             n_samples = shape[0]
             index = np.random.choice(self.n_val_data, n_samples, replace=False)
-            return self.val_data[index]
+            return self.val_data[index].to(self.device)
         if(mode == 'test'):
             assert self.test_data is not None, "No ground truth data available"
             n_samples = shape[0]
             index = np.random.choice(self.n_test_data, n_samples, replace=False)
-            return self.test_data[index]
+            return self.test_data[index].to(self.device)
         
     def to(self, device):
         super().to(device)
-        if self.data is not None:
-            self.data = self.data.to(device)
-            self.val_data = self.val_data.to(device)
-            self.test_data = self.test_data.to(device)
+        self.device = device
         return self
