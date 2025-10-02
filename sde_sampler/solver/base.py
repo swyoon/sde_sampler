@@ -279,7 +279,7 @@ class Trainable(Solver):
         self.ema: EMA | None
 
         # Optimization
-        self.train_steps = 25000#self.cfg.train_steps
+        self.train_steps = 15000 #self.cfg.train_steps
         self.grad_clip: tp.Callable | None = instantiate(self.cfg.get("grad_clip"))
         self.max_grad: float | None = self.cfg.get("max_grad")
         self.max_loss: float | None = self.cfg.get("max_loss")
