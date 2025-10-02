@@ -3,6 +3,7 @@ import numpy as np
 from typing import Optional
 from .base import Distribution
 
+
 def remove_mean(samples: torch.Tensor, n_particles: int, n_dimensions: int) -> torch.Tensor:
     """Make configuration mean-free (zero center of mass)."""
     shape = samples.shape
@@ -88,33 +89,29 @@ class DW4(Distribution):
             self.n_test_data = 0
             print("No Test ground truth sample provided")
 
-    def pairwise_distances(self, x: torch.Tensor) -> torch.Tensor:
-        """Compute pairwise distances between particles."""
-        batch_size = x.shape[0]
-        #print(f"x requires grad : {x.requires_grad}")
-        coords = x.view(batch_size, self.n_particles, self.n_dims)  # (B,N,d)
-        #print(f"coords requires grad : {coords.requires_grad}")
-        coords_front = coords.unsqueeze(2)
-        coords_back = coords.unsqueeze(1)
-        #print(f"coords front requires grad : {coords_front.requires_grad}")
-        #print(f"coords back requires grad : {coords_back.requires_grad}")
-        diff = coords_front - coords_back # (B,N,N,d)
-        #print(f"diff requires grad : {diff.requires_grad}")
-        dij = torch.norm(diff, dim=-1)  # (B,N,N)
-        idx_i, idx_j = torch.triu_indices(self.n_particles,
-                                          self.n_particles, offset=1)
-        #print(f"pairwise requires grad : {dij.requires_grad}")
-        return dij[:, idx_i, idx_j]  # (B, n_pairs)
+    def interatomic_dist(self, x):
+        batch_shape = x.shape[0]
+        x = x.view(batch_shape, self.n_particles, self.n_dims)
+
+        # Compute the pairwise interatomic distances
+        # removes duplicates and diagonal
+        distances = x[:, None, :, :] - x[:, :, None, :]
+        distances = distances[
+            :,
+            torch.triu(torch.ones((self.n_particles, self.n_particles)), diagonal=1) == 1,
+        ]
+        dist = torch.linalg.norm(distances, dim=-1)
+        return dist
 
     def energy(self, x: torch.Tensor) -> torch.Tensor:
         """Compute total energy of configuration batch."""
-        dij = self.pairwise_distances(x)
+        dij = self.interatomic_dist(x)
         diff = dij - self.d0
         energy = (
             self.a * diff +
             self.b * diff**2 +
             self.c * diff**4
-        ).sum(dim=-1) / (2 * self.tau)
+        ).sum(dim=-1) / self.tau
 
         #energy = torch.clamp(energy,min=-1000,max=1000)
         return energy

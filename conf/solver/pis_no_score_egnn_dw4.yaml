@@ -13,4 +13,5 @@ solver:
 
 # Model
 generative_ctrl:
-  clip_model: 10.
+  clip_score: 1e4
+  clip_model: 1e4

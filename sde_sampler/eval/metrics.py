@@ -147,12 +147,9 @@ def get_metrics(
         metrics[f"eval/wasserstein"] = w2
 
         ##TVD
-        energy = lambda x: -distr.unnorm_log_prob(x).float().to(dist_sample.device)
+        energy = lambda x: distr.energy(x).float().to(dist_sample.device)
         tvd_e_metric = Energy_TVD(samples[idx],dist_sample,energy)
         metrics[f"eval/tvd_e"] = tvd_e_metric.item()
-
-        print(dist_sample.data.shape)
-        print(samples[idx].shape)
 
         tvd_a_metric = Atomic_TVD(samples[idx],dist_sample,distr)
         metrics[f"eval/tvd_a"] = tvd_a_metric.item()

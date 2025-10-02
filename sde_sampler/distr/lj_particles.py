@@ -152,9 +152,8 @@ class LennardJonesPotential(Distribution):
 
         if val_data_path is not None:
             val_data = np.load(val_data_path, allow_pickle=True)
-            self.val_data = remove_mean(torch.tensor(val_data, dtype=torch.float32),
-                                    self.n_particles,
-                                    self.n_dims)
+            self.val_data = remove_mean(torch.tensor(val_data, dtype=torch.float32),self.n_particles,self.n_dims)
+
             self.n_val_data = val_data.shape[0]
             print(f"Val Ground truth sample shape: {val_data.shape}")
         else:
@@ -177,16 +176,13 @@ class LennardJonesPotential(Distribution):
     def energy(self, x):
         batch_shape = x.shape[0]
         x = x.view(batch_shape, self.n_particles, self.n_dims)
-
-        dists = distances_from_vectors(x)
+        dists = distances_from_vectors(distance_vectors(x))
         lj_energies = lennard_jones_energy_torch(dists, self._eps, self._rm)
         lj_energies = lj_energies.view(batch_shape, -1).sum(dim=-1) * self._energy_factor
 
         if self.oscillator:
             osc_energies = 0.5 * self._remove_mean(x).pow(2).sum(dim=(-2, -1))
             lj_energies = lj_energies + osc_energies * self._oscillator_scale
-
-        lj_energies = torch.clamp(lj_energies,min=-1e8,max=1e8)
 
         return lj_energies[:, None]
 
