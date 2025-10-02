@@ -180,10 +180,13 @@ class LennardJonesPotential(Distribution):
         lj_energies = lennard_jones_energy_torch(dists, self._eps, self._rm)
         lj_energies = lj_energies.view(batch_shape, -1).sum(dim=-1) * self._energy_factor
 
+
         if self.oscillator:
             osc_energies = 0.5 * self._remove_mean(x).pow(2).sum(dim=(-2, -1))
             lj_energies = lj_energies + osc_energies * self._oscillator_scale
 
+        lj_energies = torch.clamp(lj_energies,-1e4,1e4)
+        
         return lj_energies[:, None]
 
     def _remove_mean(self, x):
